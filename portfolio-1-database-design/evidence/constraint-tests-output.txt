@@ -1,0 +1,39 @@
+SET
+--- Test 1: CHECK - flight cannot arrive before it departs
+psql:sql/04_constraint_tests.sql:9: ERROR:  new row for relation "flight" violates check constraint "flight_check1"
+DETAIL:  Failing row contains (20004, TN, TN999, LOS, ABV, 2026-12-01 10:00:00+00, 2026-12-01 09:00:00+00, SCHEDULED).
+--- Test 2: CHECK - origin and destination must differ
+psql:sql/04_constraint_tests.sql:13: ERROR:  new row for relation "flight" violates check constraint "flight_check"
+DETAIL:  Failing row contains (20005, TN, TN998, LOS, LOS, 2026-12-01 10:00:00+00, 2026-12-01 11:00:00+00, SCHEDULED).
+--- Test 3: FOREIGN KEY - unknown airport code
+psql:sql/04_constraint_tests.sql:17: ERROR:  insert or update on table "flight" violates foreign key constraint "flight_origin_iata_fkey"
+DETAIL:  Key (origin_iata)=(XXX) is not present in table "airport".
+--- Test 4: UNIQUE - customer email must be unique
+psql:sql/04_constraint_tests.sql:20: ERROR:  duplicate key value violates unique constraint "customer_email_key"
+DETAIL:  Key (email)=(customer1@mail.test) already exists.
+--- Test 5: UNIQUE - the same seat cannot be sold twice
+INSERT 0 1
+psql:sql/04_constraint_tests.sql:26: ERROR:  duplicate key value violates unique constraint "flight_booking_item_seat_id_key"
+DETAIL:  Key (seat_id)=(569574) already exists.
+--- Test 6: CHECK - wallet balance cannot go negative
+psql:sql/04_constraint_tests.sql:29: ERROR:  new row for relation "wallet" violates check constraint "wallet_balance_check"
+DETAIL:  Failing row contains (1, 1, -1.00, 0).
+--- Test 7: CHECK - hotel check-out must be after check-in
+psql:sql/04_constraint_tests.sql:33: ERROR:  new row for relation "hotel_booking_item" violates check constraint "hotel_booking_item_check"
+DETAIL:  Failing row contains (330405, 1, 2026-12-10, 2026-12-08, 1, 2).
+--- Test 8: CHECK - invalid booking status value
+psql:sql/04_constraint_tests.sql:36: ERROR:  new row for relation "booking" violates check constraint "booking_status_check"
+DETAIL:  Failing row contains (1, TN000001, 26673, null, LOST, 2025-10-11 14:10:51.656435+00).
+DELETE 1
+--- Integrity check: every booking item has exactly one matching subtype row (expect 0)
+ items_without_subtype 
+-----------------------
+                     0
+(1 row)
+
+--- Integrity check: sold seats are marked unavailable (expect 0)
+ sold_but_available 
+--------------------
+                  0
+(1 row)
+

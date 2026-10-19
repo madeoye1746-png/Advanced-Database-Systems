@@ -1,0 +1,295 @@
+// TripNest Travel & Booking Platform — ERD
+// MIT 8103 Advanced Database Systems, Portfolio 1
+// Paste this whole file into https://dbdiagram.io/d to render the diagram.
+// Legend: "<" = one-to-many, "-" = one-to-one
+
+Project TripNest {
+  database_type: 'PostgreSQL'
+  Note: 'Simulated online travel agency selling flights, hotels and tours'
+}
+
+Table "country" {
+  "country_code" CHAR(2) [pk]
+  "country_name" VARCHAR(100) [unique, not null]
+}
+
+Table "city" {
+  "city_id" SERIAL [pk, increment]
+  "city_name" VARCHAR(100) [not null]
+  "country_code" CHAR(2) [not null]
+
+  Indexes {
+    (city_name, country_code) [unique]
+  }
+}
+
+Table "airport" {
+  "iata_code" CHAR(3) [pk]
+  "airport_name" VARCHAR(150) [not null]
+  "city_id" INT [not null]
+}
+
+Table "airline" {
+  "airline_code" CHAR(2) [pk]
+  "airline_name" VARCHAR(100) [unique, not null]
+}
+
+Table "customer" {
+  "customer_id" BIGSERIAL [pk, increment]
+  "first_name" VARCHAR(60) [not null]
+  "last_name" VARCHAR(60) [not null]
+  "email" VARCHAR(150) [unique, not null]
+  "phone" VARCHAR(20)
+  "date_of_birth" DATE [check: `date_of_birth < CURRENT_DATE`]
+  "created_at" TIMESTAMPTZ [not null, default: `now()`]
+}
+
+Table "agent" {
+  "agent_id" SERIAL [pk, increment]
+  "full_name" VARCHAR(120) [not null]
+  "email" VARCHAR(150) [unique, not null]
+  "role" VARCHAR(20) [not null, check: `role IN ('AGENT','SUPERVISOR','ADMIN')`]
+}
+
+Table "travel_document" {
+  "document_id" BIGSERIAL [pk, increment]
+  "customer_id" BIGINT [not null]
+  "document_type" VARCHAR(20) [not null, check: `document_type IN ('PASSPORT','NATIONAL_ID','VISA')`]
+  "document_number" VARCHAR(30) [not null]
+  "issuing_country" CHAR(2) [not null]
+  "expiry_date" DATE [not null]
+
+  Indexes {
+    (document_type, document_number, issuing_country) [unique]
+  }
+}
+
+Table "wallet" {
+  "wallet_id" BIGSERIAL [pk, increment]
+  "customer_id" BIGINT [unique, not null]
+  "balance" NUMERIC(14,2) [not null, check: `balance >= 0`, default: 0]
+  "version" INT [not null, default: 0]
+}
+
+Table "flight" {
+  "flight_id" BIGSERIAL [pk, increment]
+  "airline_code" CHAR(2) [not null]
+  "flight_number" VARCHAR(8) [not null]
+  "origin_iata" CHAR(3) [not null]
+  "destination_iata" CHAR(3) [not null]
+  "departure_time" TIMESTAMPTZ [not null]
+  "arrival_time" TIMESTAMPTZ [not null]
+  "status" VARCHAR(12) [not null, check: `status IN ('SCHEDULED','DELAYED','CANCELLED','DEPARTED','ARRIVED')`, default: 'SCHEDULED']
+
+  Checks {
+    `origin_iata <> destination_iata`
+    `arrival_time > departure_time`
+  }
+
+  Indexes {
+    (airline_code, flight_number, departure_time) [unique]
+  }
+}
+
+Table "flight_seat" {
+  "seat_id" BIGSERIAL [pk, increment]
+  "flight_id" BIGINT [not null]
+  "seat_number" VARCHAR(4) [not null]
+  "cabin_class" VARCHAR(10) [not null, check: `cabin_class IN ('ECONOMY','PREMIUM','BUSINESS','FIRST')`]
+  "price" NUMERIC(12,2) [not null, check: `price > 0`]
+  "is_available" BOOLEAN [not null, default: true]
+  "version" INT [not null, default: 0]
+
+  Indexes {
+    (flight_id, seat_number) [unique]
+  }
+}
+
+Table "hotel" {
+  "hotel_id" SERIAL [pk, increment]
+  "hotel_name" VARCHAR(150) [not null]
+  "city_id" INT [not null]
+  "star_rating" SMALLINT [check: `star_rating BETWEEN 1 AND 5`]
+  "address" VARCHAR(250)
+}
+
+Table "room_type" {
+  "room_type_id" SERIAL [pk, increment]
+  "hotel_id" INT [not null]
+  "type_name" VARCHAR(50) [not null]
+  "max_guests" SMALLINT [not null, check: `max_guests > 0`]
+  "nightly_rate" NUMERIC(12,2) [not null, check: `nightly_rate > 0`]
+  "total_rooms" INT [not null, check: `total_rooms >= 0`]
+
+  Indexes {
+    (hotel_id, type_name) [unique]
+  }
+}
+
+Table "tour" {
+  "tour_id" SERIAL [pk, increment]
+  "tour_name" VARCHAR(150) [not null]
+  "city_id" INT [not null]
+  "duration_hours" NUMERIC(4,1) [not null, check: `duration_hours > 0`]
+  "price" NUMERIC(12,2) [not null, check: `price > 0`]
+}
+
+Table "booking" {
+  "booking_id" BIGSERIAL [pk, increment]
+  "booking_ref" CHAR(8) [unique, not null]
+  "customer_id" BIGINT [not null]
+  "agent_id" INT
+  "status" VARCHAR(12) [not null, check: `status IN ('PENDING','CONFIRMED','CANCELLED','COMPLETED')`, default: 'PENDING']
+  "created_at" TIMESTAMPTZ [not null, default: `now()`]
+}
+
+Table "booking_item" {
+  "item_id" BIGSERIAL [pk, increment]
+  "booking_id" BIGINT [not null]
+  "item_type" VARCHAR(6) [not null, check: `item_type IN ('FLIGHT','HOTEL','TOUR')`]
+  "amount" NUMERIC(12,2) [not null, check: `amount >= 0`]
+}
+
+Table "flight_booking_item" {
+  "item_id" BIGINT [pk]
+  "seat_id" BIGINT [unique, not null]
+  "passenger_document_id" BIGINT [not null]
+}
+
+Table "hotel_booking_item" {
+  "item_id" BIGINT [pk]
+  "room_type_id" INT [not null]
+  "check_in" DATE [not null]
+  "check_out" DATE [not null]
+  "rooms" SMALLINT [not null, check: `rooms > 0`, default: 1]
+  "guests" SMALLINT [not null, check: `guests > 0`]
+
+  Checks {
+    `check_out > check_in`
+  }
+}
+
+Table "tour_booking_item" {
+  "item_id" BIGINT [pk]
+  "tour_id" INT [not null]
+  "tour_date" DATE [not null]
+  "participants" SMALLINT [not null, check: `participants > 0`]
+}
+
+Table "payment" {
+  "payment_id" BIGSERIAL [pk, increment]
+  "booking_id" BIGINT [not null]
+  "amount" NUMERIC(12,2) [not null, check: `amount > 0`]
+  "method" VARCHAR(12) [not null, check: `method IN ('CARD','TRANSFER','WALLET','USSD')`]
+  "status" VARCHAR(10) [not null, check: `status IN ('PENDING','SUCCESS','FAILED','REFUNDED')`]
+  "provider_ref" VARCHAR(50) [unique]
+  "paid_at" TIMESTAMPTZ [not null, default: `now()`]
+}
+
+Table "refund" {
+  "refund_id" BIGSERIAL [pk, increment]
+  "payment_id" BIGINT [not null]
+  "amount" NUMERIC(12,2) [not null, check: `amount > 0`]
+  "reason" VARCHAR(250)
+  "processed_by" INT
+  "refunded_at" TIMESTAMPTZ [not null, default: `now()`]
+}
+
+Table "wallet_transaction" {
+  "txn_id" BIGSERIAL [pk, increment]
+  "wallet_id" BIGINT [not null]
+  "txn_type" VARCHAR(10) [not null, check: `txn_type IN ('CREDIT','DEBIT')`]
+  "amount" NUMERIC(12,2) [not null, check: `amount > 0`]
+  "booking_id" BIGINT
+  "created_at" TIMESTAMPTZ [not null, default: `now()`]
+}
+
+Ref:"country"."country_code" < "city"."country_code"
+
+Ref:"city"."city_id" < "airport"."city_id"
+
+Ref:"customer"."customer_id" < "travel_document"."customer_id" [delete: cascade]
+
+Ref:"country"."country_code" < "travel_document"."issuing_country"
+
+Ref:"customer"."customer_id" - "wallet"."customer_id" [delete: cascade]
+
+Ref:"airline"."airline_code" < "flight"."airline_code"
+
+Ref:"airport"."iata_code" < "flight"."origin_iata"
+
+Ref:"airport"."iata_code" < "flight"."destination_iata"
+
+Ref:"flight"."flight_id" < "flight_seat"."flight_id" [delete: cascade]
+
+Ref:"city"."city_id" < "hotel"."city_id"
+
+Ref:"hotel"."hotel_id" < "room_type"."hotel_id" [delete: cascade]
+
+Ref:"city"."city_id" < "tour"."city_id"
+
+Ref:"customer"."customer_id" < "booking"."customer_id"
+
+Ref:"agent"."agent_id" < "booking"."agent_id"
+
+Ref:"booking"."booking_id" < "booking_item"."booking_id" [delete: cascade]
+
+Ref:"booking_item"."item_id" - "flight_booking_item"."item_id" [delete: cascade]
+
+Ref:"flight_seat"."seat_id" - "flight_booking_item"."seat_id"
+
+Ref:"travel_document"."document_id" < "flight_booking_item"."passenger_document_id"
+
+Ref:"booking_item"."item_id" - "hotel_booking_item"."item_id" [delete: cascade]
+
+Ref:"room_type"."room_type_id" < "hotel_booking_item"."room_type_id"
+
+Ref:"booking_item"."item_id" - "tour_booking_item"."item_id" [delete: cascade]
+
+Ref:"tour"."tour_id" < "tour_booking_item"."tour_id"
+
+Ref:"booking"."booking_id" < "payment"."booking_id"
+
+Ref:"payment"."payment_id" < "refund"."payment_id"
+
+Ref:"agent"."agent_id" < "refund"."processed_by"
+
+Ref:"wallet"."wallet_id" < "wallet_transaction"."wallet_id"
+
+Ref:"booking"."booking_id" < "wallet_transaction"."booking_id"
+
+TableGroup reference_data [color: #6C757D] {
+  country
+  city
+  airport
+  airline
+}
+
+TableGroup customers_and_staff [color: #0D6EFD] {
+  customer
+  travel_document
+  wallet
+  wallet_transaction
+  agent
+}
+
+TableGroup inventory [color: #198754] {
+  flight
+  flight_seat
+  hotel
+  room_type
+  tour
+}
+
+TableGroup bookings [color: #FD7E14] {
+  booking
+  booking_item
+  flight_booking_item
+  hotel_booking_item
+  tour_booking_item
+}
+
+TableGroup payments [color: #DC3545] {
+  payment
+  refund
+}
