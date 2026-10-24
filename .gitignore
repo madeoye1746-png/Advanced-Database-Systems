@@ -2,3 +2,4 @@ YOUR_TO-DO*.md
 __pycache__/
 *.pyc
 /final-documentation/
+run_sql.sh
