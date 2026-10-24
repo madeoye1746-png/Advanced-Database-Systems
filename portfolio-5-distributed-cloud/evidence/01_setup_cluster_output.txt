@@ -1,0 +1,16 @@
+## 1. Replication role + access rule on the primary
+DO
+ pg_reload_conf 
+----------------
+ t
+(1 row)
+
+## 2. Start the replica: pg_basebackup copies the primary (first start only), -R writes standby.signal + primary_conninfo
+6862aa5d46f8af5fd04993d052a49362f28fe5819da7b8aa29c041671b155073
+## 3. Start the second shard (empty PostgreSQL)
+b5c8c14b66aa5afa4e1aa5c4fd76619855c7bc1411cdf5b95013d67973e5aa96
+NAMES        IMAGE           PORTS                                             STATUS
+nm-shard2    postgres:16.0   0.0.0.0:5435->5432/tcp, [::]:5435->5432/tcp       Up 20 seconds
+nm-replica   postgres:16.0   0.0.0.0:5434->5432/tcp, [::]:5434->5432/tcp       Up 23 seconds
+nm-mongo     mongo:7         0.0.0.0:27018->27017/tcp, [::]:27018->27017/tcp   Up 8 minutes
+nm-primary   postgres:16.0   0.0.0.0:5433->5432/tcp, [::]:5433->5432/tcp       Up 39 minutes

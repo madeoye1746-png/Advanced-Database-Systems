@@ -1,57 +1,48 @@
-# Advanced Database Systems Portfolio — TripNest
+# MIT 8103 Advanced Database Systems - Individual Practical Database Portfolio
 
-**Course:** MIT 8103 Advanced Database Systems · 2026/2027 Session, First Semester
-**Student:** Marvellous <!-- add full name and matric number -->
-**Case study:** TripNest Travel & Booking Platform, a simulated online travel agency selling flights, hotels and tours. Full statement: [`docs/case-study.md`](docs/case-study.md)
+**Case study / organisation:** **NaijaMart Online**, a simulated Nigerian e-commerce platform (customers, products, orders, payments, deliveries).
+**DBMS used:** PostgreSQL 16 (relational, replication, sharding) and MongoDB 7 (NoSQL), both in Docker containers.
+**Student:** MARVELLOUS ADEOYE / 301911746
 
-## Technology
+All five portfolio activities use the same case study. Every claim in the portfolio is backed by captured output in the `evidence/` folder of the matching portfolio.
 
-| Purpose | Technology |
-|---|---|
-| Relational database (Portfolios 1–3, 5) | PostgreSQL 16 |
-| Document database (Portfolio 4) | MongoDB |
-| Key-value store (Portfolio 4) | Redis |
-| Distributed setup (Portfolio 5) | Docker Compose (PostgreSQL streaming replication) |
-| ER diagrams | Mermaid |
-
-## Portfolio progress
-
-| # | Activity | Folder | Status |
+| Portfolio | Folder | What it contains | Key result |
 |---|---|---|---|
-| 1 | Database Design and Modelling | [`portfolio-1-database-design`](portfolio-1-database-design) | ✅ Schema, data and tests complete |
-| 2 | Query Processing and Optimisation | [`portfolio-2-query-optimisation`](portfolio-2-query-optimisation) | ⏳ Planned |
-| 3 | Transactions and Concurrency | [`portfolio-3-transactions-concurrency`](portfolio-3-transactions-concurrency) | ⏳ Planned |
-| 4 | NoSQL and Advanced Data Models | [`portfolio-4-nosql`](portfolio-4-nosql) | ⏳ Planned |
-| 5 | Distributed and Cloud Database | [`portfolio-5-distributed-cloud`](portfolio-5-distributed-cloud) | ⏳ Planned |
+| 1. Database Design and Modelling | [`portfolio-1-database-design`](portfolio-1-database-design) | Case study statement, ER diagram, 8-table schema, keys and constraints, 3NF normalisation, trigger, constraint tests | 7 constraint violations all rejected by the database; 200,000 orders / 500,000 order lines generated |
+| 2. Query Processing and Optimisation | [`portfolio-2-query-optimisation`](portfolio-2-query-optimisation) | 7 queries, `EXPLAIN ANALYZE` before/after, composite / partial / covering indexes, materialized view | Up to 111x faster with an index; one query where the index was correctly ignored and a materialized view gave 1623x |
+| 3. Transactions and Concurrency | [`portfolio-3-transactions-concurrency`](portfolio-3-transactions-concurrency) | COMMIT / ROLLBACK / SAVEPOINT, safe `place_order` function, two-session demos of lost update, isolation levels, deadlock | Lost update reproduced (stock 9 instead of 8) and fixed two ways; deadlock detected and avoided |
+| 4. NoSQL and Advanced Data Models | [`portfolio-4-nosql`](portfolio-4-nosql) | MongoDB document model built from the relational data, CRUD, aggregation, indexes, TTL key-value carts | Index cut documents examined from 30,000 to 2 |
+| 5. Distributed and Cloud Database | [`portfolio-5-distributed-cloud`](portfolio-5-distributed-cloud) | 3-server cluster: streaming replication, sync vs async, hash sharding over two servers, failover, cloud mapping | Replica, shard and failover all demonstrated with output; CAP trade-off measured |
+| Final documentation | [`final-documentation`](final-documentation) | 2-3 page summary, evidence screenshots, AI-use declaration | |
 
-## Quick start
+## How to run everything from scratch
+
+Requirements: Docker Desktop. Windows users run the `.sh` files in Git Bash.
 
 ```bash
-createdb tripnest
-cd portfolio-1-database-design/sql
-psql -d tripnest -f 01_schema.sql
-psql -d tripnest -f 02_seed_reference.sql
-psql -d tripnest -f 03_seed_bulk.sql
-psql -d tripnest -f 04_constraint_tests.sql
+# 1. PostgreSQL primary (port 5433) + network used by all containers
+docker network create naijamart-net
+docker run -d --name nm-primary --network naijamart-net -e POSTGRES_PASSWORD=portfolio_test -e POSTGRES_DB=naijamart \
+  -p 5433:5432 postgres:16.0 -c wal_level=replica -c max_wal_senders=10 -c hot_standby=on
+
+# 2. Portfolio 1 - schema and data (about 40 s)
+docker exec -i nm-primary psql -U postgres -d naijamart < portfolio-1-database-design/01_schema.sql
+docker exec -i nm-primary psql -U postgres -d naijamart < portfolio-1-database-design/02_seed_data.sql
+
+# 3. Portfolios 2 and 3 - see each folder's README (helper: ./run_sql.sh <file.sql>)
+# 4. Portfolio 4 - docker run -d --name nm-mongo --network naijamart-net -p 27018:27017 mongo:7, then follow its README
+# 5. Portfolio 5 - cd portfolio-5-distributed-cloud && ./01_setup_cluster.sh && ./02_replication_demo.sh && ./03_sharding.sh
 ```
 
-## Repository structure
+Passwords in these files are throw-away values for local test containers, not real credentials.
 
-```
-advanced-database-portfolio/
-├── docs/                                  case study, reflection, AI-use declaration
-├── portfolio-1-database-design/           schema, seed data, ERD, constraint tests
-├── portfolio-2-query-optimisation/        queries, execution plans, index experiments
-├── portfolio-3-transactions-concurrency/  transaction and locking demos
-├── portfolio-4-nosql/                     MongoDB and Redis models
-├── portfolio-5-distributed-cloud/         replication setup and discussion
-└── README.md
-```
+## Repository conventions
+* One commit per portfolio activity (see `git log`).
+* `run_sql.sh` runs a SQL file inside the container through a pseudo-terminal so that results and errors appear in the correct order in the evidence files.
+* Evidence files are real, unedited tool output. Screenshots in `final-documentation/screenshots` are rendered from those evidence files by `make_screenshots.py`.
 
-## Data notice
+## Sources and tools
+PostgreSQL 16 documentation (EXPLAIN, indexes, transaction isolation, streaming replication, partitioning, postgres_fdw); MongoDB 7 manual (data modelling, aggregation, indexes, TTL, `$jsonSchema`); Docker images `postgres:16.0` and `mongo:7`; Python 3 with matplotlib for charts. Data is synthetic and generated by `portfolio-1-database-design/02_seed_data.sql`.
 
-All data in this repository is simulated and generated by script. No real customer, passenger or company data is used.
-
-## Academic integrity
-
-See [`docs/ai-use-declaration.md`](docs/ai-use-declaration.md).
+## AI Use Declaration
+See [`final-documentation`](final-documentation) for the full declaration (tool used, what it was used for, how the output was verified).

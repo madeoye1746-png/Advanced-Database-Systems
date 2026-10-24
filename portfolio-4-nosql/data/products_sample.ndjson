@@ -1,0 +1,3 @@
+{"product_id" : 1, "sku" : "SKU-00001", "name" : "Classic Handbag 1", "category" : "Fashion", "unit_price" : 185864.75, "stock_qty" : 10, "attributes" : {"brand" : "NaijaMart Select"}, "tags" : ["fashion","premium"]}
+{"product_id" : 2, "sku" : "SKU-00002", "name" : "Pro Dinner Set 2", "category" : "Home & Kitchen", "unit_price" : 234182.92, "stock_qty" : 10, "attributes" : {"brand" : "NaijaMart Select"}, "tags" : ["home & kitchen","premium"]}
+{"product_id" : 3, "sku" : "SKU-00003", "name" : "Eco Rice 50kg 3", "category" : "Groceries", "unit_price" : 24017.11, "stock_qty" : 146, "attributes" : {"brand" : "NaijaMart Select"}, "tags" : ["groceries","value"]}

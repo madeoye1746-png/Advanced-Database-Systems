@@ -1,0 +1,25 @@
+ setseed 
+---------
+ 
+(1 row)
+
+INSERT 0 12
+INSERT 0 300
+INSERT 0 20000
+INSERT 0 200000
+INSERT 0 500000
+UPDATE 200000
+INSERT 0 174379
+INSERT 0 164295
+ANALYZE
+     t      | count  
+------------+--------
+ category   |     12
+ product    |    300
+ customer   |  20000
+ payment    | 174379
+ delivery   | 164295
+ orders     | 200000
+ order_item | 500000
+(7 rows)
+

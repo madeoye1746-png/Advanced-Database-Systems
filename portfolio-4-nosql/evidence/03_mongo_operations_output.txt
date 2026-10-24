@@ -1,0 +1,155 @@
+
+=== 0. Schema validation: the document model is flexible, but not lawless ===
+Rejected invalid product (error code 121): Document failed validation
+
+=== 1. CREATE - a product with its OWN attributes (no ALTER TABLE needed) ===
+{
+  acknowledged: true,
+  insertedId: ObjectId('6adc9a4dfd0ed4a8dec037e7')
+}
+
+=== 2. READ - nested-attribute filters ===
+Phones with >= 8 GB RAM in Blue:
+{
+  name: 'Pro Phone 18',
+  unit_price: 68878.95,
+  attributes: {
+    ram_gb: 8,
+    storage_gb: 128,
+    colour: 'Blue',
+    network: '5G'
+  }
+}
+{
+  name: 'Pro Phone 66',
+  unit_price: 40972.6,
+  attributes: {
+    ram_gb: 8,
+    storage_gb: 128,
+    colour: 'Blue',
+    network: '5G'
+  }
+}
+{
+  name: 'Pro Phone 114',
+  unit_price: 29368.82,
+  attributes: {
+    ram_gb: 8,
+    storage_gb: 128,
+    colour: 'Blue',
+    network: '5G'
+  }
+}
+Delivered orders in Lagos above N1,000,000 (count): 879
+Orders that contain product 45 (array query, count): 300
+
+=== 3. UPDATE - atomic operators ===
+{
+  name: 'Solar Inverter 3kVA',
+  stock_qty: 10,
+  attributes: {
+    warranty_months: 48
+  },
+  tags: [
+    'power',
+    'premium',
+    'bestseller'
+  ]
+}
+Flag SHIPPED orders older than 2026-09-24 for follow-up (documents modified): 2839
+
+=== 4. DELETE ===
+{
+  acknowledged: true,
+  deletedCount: 1
+}
+
+=== 5. AGGREGATION PIPELINE - revenue by state (30,000-order sample) ===
+{
+  _id: 'Edo',
+  orders: 3462,
+  revenue: 2904839299.73
+}
+{
+  _id: 'Oyo',
+  orders: 3523,
+  revenue: 2885413505.81
+}
+{
+  _id: 'Kano',
+  orders: 3480,
+  revenue: 2870636526.81
+}
+{
+  _id: 'Enugu',
+  orders: 3449,
+  revenue: 2851368536.48
+}
+
+=== 6. AGGREGATION - top 5 products by units sold ($unwind the embedded items array) ===
+{
+  _id: 'Pro Dinner Set 242',
+  units: 1041,
+  revenue: 229406398.38
+}
+{
+  _id: 'Premium Phone 222',
+  units: 1034,
+  revenue: 114214026.96000001
+}
+{
+  _id: 'Pro Dinner Set 26',
+  units: 1025,
+  revenue: 48511927.75
+}
+{
+  _id: 'Pro Phone 282',
+  units: 1022,
+  revenue: 38544995.72
+}
+{
+  _id: 'Pro Blender 178',
+  units: 1021,
+  revenue: 105520329.58
+}
+
+=== 7. 'Customers also bought' (graph-style relationship query on co-purchase) ===
+{
+  _id: 'Pro Blender 82',
+  times_bought_together: 300
+}
+{
+  _id: 'Smart Shirt 8',
+  times_bought_together: 200
+}
+{
+  _id: 'Basic Laptop 271',
+  times_bought_together: 100
+}
+
+=== 8. INDEXING - explain('executionStats') before and after ===
+-- BEFORE indexes (collection scan)
+orders by customer 777   -> docsExamined=30000, keysExamined=0, returned=2, time=105 ms
+orders containing prod 45 -> docsExamined=30000, keysExamined=0, returned=300, time=159 ms
+phones RAM>=8           -> docsExamined=300, keysExamined=0, returned=18, time=13 ms
+-- AFTER indexes
+orders by customer 777   -> docsExamined=2, keysExamined=2, returned=2, time=35 ms
+orders containing prod 45 -> docsExamined=300, keysExamined=300, returned=300, time=15 ms
+phones RAM>=8           -> docsExamined=18, keysExamined=18, returned=18, time=4 ms
+
+=== 9. KEY-VALUE style use: shopping carts that expire by themselves (TTL index) ===
+{
+  _id: 'session:abc123',
+  customer_id: 777,
+  items: [
+    {
+      product_id: 45,
+      qty: 1
+    },
+    {
+      product_id: 82,
+      qty: 2
+    }
+  ],
+  updated_at: ISODate('2026-10-24T11:45:22.396Z')
+}

@@ -1,0 +1,4 @@
+YOUR_TO-DO*.md
+__pycache__/
+*.pyc
+/final-documentation/

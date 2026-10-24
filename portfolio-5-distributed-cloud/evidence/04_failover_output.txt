@@ -1,0 +1,54 @@
+
+=================== 1. Build a disposable standby (nm-replica2, port 5436) from the primary ===================
+    node    | is_standby | orders | last_replication_test_id 
+------------+------------+--------+--------------------------
+ nm-primary | f          | 200006 |                   200004
+(1 row)
+
+    node     | is_standby | orders | last_replication_test_id 
+-------------+------------+--------+--------------------------
+ nm-replica2 | t          | 200006 |                   200004
+(1 row)
+
+
+=================== 2. CRASH: the primary server is stopped ===================
+nm-primary stopped. Write attempt against it:
+Error response from daemon: container c82e4ae9d036014c6ba2cb371d42c23628411a853d811f6da7d656a131d2e610 is not running
+
+=================== 3. FAILOVER: promote the standby to primary ===================
+ pg_promote 
+------------
+ t
+(1 row)
+
+    node     | is_standby | timeline 
+-------------+------------+----------
+ nm-replica2 | f          |        2
+(1 row)
+
+
+=================== 4. The new primary accepts writes, and nothing committed before the crash was lost ===================
+   id   |          note          
+--------+------------------------
+ 200005 | written AFTER failover
+(1 row)
+
+INSERT 0 1
+ orders_still_there | replication_test_rows 
+--------------------+-----------------------
+             200006 |                200005
+(1 row)
+
+Time from crash to first successful write on the new primary: 13.7 seconds, measured from the stop command to the first successful write (includes the time Docker needs to stop the container). Promotion here was manual; tools such as Patroni or a cloud Multi-AZ service automate it
+
+=================== 5. Clean up: remove the disposable node and bring the original primary back (it never received the post-failover writes) ===================
+    node    | is_standby | replication_test_rows 
+------------+------------+-----------------------
+ nm-primary | f          |                200004
+(1 row)
+
+ application_name |   state   | sync_state 
+------------------+-----------+------------
+ walreceiver      | streaming | async
+(1 row)
+

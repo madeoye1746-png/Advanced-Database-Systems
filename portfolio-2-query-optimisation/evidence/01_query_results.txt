@@ -1,0 +1,100 @@
+                            section                            
+---------------------------------------------------------------
+ === Q1  Order history of one customer (most recent first) ===
+(1 row)
+
+ order_id |         order_date         |  status   | total_amount 
+----------+----------------------------+-----------+--------------
+   196837 | 2026-09-01 01:15:40.523604 | DELIVERED |    586087.31
+    45196 | 2026-08-13 01:19:15.93003  | PENDING   |    852535.32
+    39646 | 2026-07-27 05:04:54.941922 | DELIVERED |   1456805.98
+   143900 | 2026-07-02 08:59:16.061624 | SHIPPED   |     77745.12
+    66618 | 2026-04-08 04:48:38.741396 | DELIVERED |   1205978.65
+(5 rows)
+
+                              section                               
+--------------------------------------------------------------------
+ === Q2  Top 5 products by revenue (JOIN + GROUP BY + ORDER BY) ===
+(1 row)
+
+ product_id |         name          |    revenue    
+------------+-----------------------+---------------
+        298 | Pro Blender 298       | 1661331837.23
+         46 | Premium Blender 46    | 1647504754.15
+         90 | Pro Phone 90          | 1626071131.71
+         50 | Pro Dinner Set 50     | 1577194644.70
+         14 | Premium Dinner Set 14 | 1572410949.95
+(5 rows)
+
+                            section                             
+----------------------------------------------------------------
+ === Q3  Pending orders older than 30 days (follow-up list) ===
+(1 row)
+
+ stale_pending_orders 
+----------------------
+                 9283
+(1 row)
+
+                             section                             
+-----------------------------------------------------------------
+ === Q4  Revenue by state, last 30 days, excluding cancelled ===
+(1 row)
+
+ state  | orders |   revenue    
+--------+--------+--------------
+ Kano   |    970 | 810057962.71
+ Rivers |    971 | 800830752.23
+ Lagos  |    954 | 785417618.65
+ Edo    |    959 | 777989406.00
+ Enugu  |    942 | 774495023.51
+ Oyo    |    935 | 749920782.27
+ Kaduna |    896 | 743486490.79
+ FCT    |    923 | 741061570.59
+(8 rows)
+
+                                  section                                  
+---------------------------------------------------------------------------
+ === Q5a Customers with NO order in the last 180 days - NOT IN version ===
+(1 row)
+
+ count 
+-------
+  1748
+(1 row)
+
+                            section                             
+----------------------------------------------------------------
+ === Q5b Same question - NOT EXISTS version (query rewrite) ===
+(1 row)
+
+ count 
+-------
+  1748
+(1 row)
+
+                               section                               
+---------------------------------------------------------------------
+ === Q6  Window function: top 2 customers by spend in each state ===
+(1 row)
+
+ state  |    full_name    | customer_id |    spend    | rnk 
+--------+-----------------+-------------+-------------+-----
+ Edo    | Uche Balogun    |       13767 | 15519494.42 |   1
+ Edo    | Ibrahim Danjuma |        4999 | 15340976.68 |   2
+ Enugu  | Ngozi Adeyemi   |        7053 | 17689759.53 |   1
+ Enugu  | Emeka Danjuma   |         501 | 17299951.32 |   2
+ FCT    | Femi Balogun    |       13409 | 18669216.60 |   1
+ FCT    | Ngozi Nwosu     |       11073 | 15993949.65 |   2
+ Kaduna | Funke Lawal     |        5030 | 17989280.23 |   1
+ Kaduna | Aisha Eze       |        9046 | 16060835.94 |   2
+ Kano   | Halima Balogun  |         628 | 15752444.73 |   1
+ Kano   | Uche Okafor     |        7932 | 15050722.39 |   2
+ Lagos  | Aisha Balogun   |         976 | 17679846.15 |   1
+ Lagos  | Chinedu Okafor  |        5760 | 15694638.66 |   2
+ Oyo    | Femi Lawal      |       18899 | 17261016.33 |   1
+ Oyo    | Femi Lawal      |       12059 | 17051688.01 |   2
+ Rivers | Kemi Lawal      |        8634 | 18558290.55 |   1
+ Rivers | Aisha Lawal     |         346 | 17812376.20 |   2
+(16 rows)
+

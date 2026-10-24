@@ -1,0 +1,33 @@
+DROP MATERIALIZED VIEW
+SELECT 300
+CREATE INDEX
+                    section                    
+-----------------------------------------------
+ Q2 again, answered from the materialized view
+(1 row)
+
+                                                          QUERY PLAN                                                          
+------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=11.98..12.00 rows=5 width=294) (actual time=0.309..0.311 rows=5 loops=1)
+   Buffers: shared hit=7
+   ->  Sort  (cost=11.98..12.73 rows=300 width=294) (actual time=0.307..0.308 rows=5 loops=1)
+         Sort Key: revenue DESC
+         Sort Method: top-N heapsort  Memory: 25kB
+         Buffers: shared hit=7
+         ->  Seq Scan on mv_product_revenue  (cost=0.00..7.00 rows=300 width=294) (actual time=0.014..0.054 rows=300 loops=1)
+               Buffers: shared hit=4
+ Planning:
+   Buffers: shared hit=28 read=1
+ Planning Time: 0.868 ms
+ Execution Time: 0.381 ms
+(12 rows)
+
+ product_id |         name          |    revenue    
+------------+-----------------------+---------------
+        298 | Pro Blender 298       | 1661331837.23
+         46 | Premium Blender 46    | 1647504754.15
+         90 | Pro Phone 90          | 1626071131.71
+         50 | Pro Dinner Set 50     | 1577194644.70
+         14 | Premium Dinner Set 14 | 1572410949.95
+(5 rows)
+

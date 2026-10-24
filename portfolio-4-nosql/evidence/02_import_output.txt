@@ -1,0 +1,44 @@
+2026-10-24T11:44:57.440+0000	connected to: mongodb://localhost/
+2026-10-24T11:44:57.444+0000	dropping: `naijamart.products`
+2026-10-24T11:44:57.597+0000	300 document(s) imported successfully. 0 document(s) failed to import.
+2026-10-24T11:44:58.791+0000	connected to: mongodb://localhost/
+2026-10-24T11:44:58.791+0000	dropping: `naijamart.orders`
+2026-10-24T11:45:01.792+0000	[#################.......] naijamart.orders	12.5MB/17.0MB (73.4%)
+2026-10-24T11:45:02.588+0000	[########################] naijamart.orders	17.0MB/17.0MB (100.0%)
+2026-10-24T11:45:02.588+0000	30000 document(s) imported successfully. 0 document(s) failed to import.
+orders: 30000  products: 300
+{
+  _id: 1,
+  order_date: ISODate('2025-09-27T10:48:13.058Z'),
+  status: 'DELIVERED',
+  total_amount: 871948.7,
+  customer: {
+    customer_id: 19538,
+    name: 'Bola Nwosu',
+    city: 'Port Harcourt',
+    state: 'Rivers'
+  },
+  items: [
+    {
+      product_id: 45,
+      name: 'Lite Dress 45',
+      quantity: 2,
+      unit_price: 49508.07
+    },
+    {
+      product_id: 82,
+      name: 'Pro Blender 82',
+      quantity: 4,
+      unit_price: 193233.14
+    }
+  ],
+  payment: {
+    method: 'TRANSFER',
+    status: 'SUCCESS'
+  },
+  delivery: {
+    courier: 'DHL Nigeria',
+    tracking_no: 'TRK000000001',
+    status: 'DELIVERED'
+  }
+}

@@ -1,0 +1,169 @@
+          section          
+---------------------------
+ ##### Q1 customer history
+(1 row)
+
+                                                                QUERY PLAN                                                                
+------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.42..22.51 rows=5 width=29) (actual time=0.040..0.084 rows=5 loops=1)
+   Buffers: shared hit=8
+   ->  Index Scan using idx_orders_customer_date on orders  (cost=0.42..44.59 rows=10 width=29) (actual time=0.038..0.080 rows=5 loops=1)
+         Index Cond: (customer_id = 777)
+         Buffers: shared hit=8
+ Planning:
+   Buffers: shared hit=143
+ Planning Time: 0.863 ms
+ Execution Time: 0.164 ms
+(9 rows)
+
+        section        
+-----------------------
+ ##### Q2 top products
+(1 row)
+
+                                                                               QUERY PLAN                                                                                
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=9016.36..9016.38 rows=5 width=53) (actual time=359.519..359.829 rows=5 loops=1)
+   Buffers: shared hit=3220
+   ->  Sort  (cost=9016.36..9017.11 rows=300 width=53) (actual time=359.516..359.825 rows=5 loops=1)
+         Sort Key: (sum(((oi.quantity)::numeric * oi.unit_price))) DESC
+         Sort Method: top-N heapsort  Memory: 25kB
+         Buffers: shared hit=3220
+         ->  Finalize GroupAggregate  (cost=8933.13..9011.38 rows=300 width=53) (actual time=357.888..359.357 rows=300 loops=1)
+               Group Key: p.product_id
+               Buffers: shared hit=3217
+               ->  Gather Merge  (cost=8933.13..9003.13 rows=600 width=53) (actual time=357.855..358.462 rows=900 loops=1)
+                     Workers Planned: 2
+                     Workers Launched: 2
+                     Buffers: shared hit=3217
+                     ->  Sort  (cost=7933.10..7933.85 rows=300 width=53) (actual time=339.440..339.489 rows=300 loops=3)
+                           Sort Key: p.product_id
+                           Sort Method: quicksort  Memory: 59kB
+                           Buffers: shared hit=3217
+                           Worker 0:  Sort Method: quicksort  Memory: 59kB
+                           Worker 1:  Sort Method: quicksort  Memory: 59kB
+                           ->  Partial HashAggregate  (cost=7917.01..7920.76 rows=300 width=53) (actual time=338.323..338.574 rows=300 loops=3)
+                                 Group Key: p.product_id
+                                 Batches: 1  Memory Usage: 157kB
+                                 Buffers: shared hit=3203
+                                 Worker 0:  Batches: 1  Memory Usage: 157kB
+                                 Worker 1:  Batches: 1  Memory Usage: 157kB
+                                 ->  Hash Join  (cost=10.75..5833.68 rows=208333 width=33) (actual time=0.346..140.469 rows=166667 loops=3)
+                                       Hash Cond: (oi.product_id = p.product_id)
+                                       Buffers: shared hit=3203
+                                       ->  Parallel Seq Scan on order_item oi  (cost=0.00..5268.33 rows=208333 width=16) (actual time=0.011..32.805 rows=166667 loops=3)
+                                             Buffers: shared hit=3185
+                                       ->  Hash  (cost=7.00..7.00 rows=300 width=21) (actual time=0.238..0.240 rows=300 loops=3)
+                                             Buckets: 1024  Batches: 1  Memory Usage: 24kB
+                                             Buffers: shared hit=12
+                                             ->  Seq Scan on product p  (cost=0.00..7.00 rows=300 width=21) (actual time=0.023..0.081 rows=300 loops=3)
+                                                   Buffers: shared hit=12
+ Planning:
+   Buffers: shared hit=135
+ Planning Time: 1.312 ms
+ Execution Time: 360.778 ms
+(39 rows)
+
+            section            
+-------------------------------
+ ##### Q3 stale pending orders
+(1 row)
+
+                                                                  QUERY PLAN                                                                  
+----------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=312.97..312.98 rows=1 width=8) (actual time=3.214..3.215 rows=1 loops=1)
+   Buffers: shared hit=28
+   ->  Index Only Scan using idx_orders_pending on orders  (cost=0.29..289.88 rows=9234 width=0) (actual time=0.097..2.458 rows=9283 loops=1)
+         Index Cond: (order_date < (now() - '30 days'::interval))
+         Heap Fetches: 0
+         Buffers: shared hit=28
+ Planning:
+   Buffers: shared hit=13
+ Planning Time: 0.218 ms
+ Execution Time: 3.247 ms
+(10 rows)
+
+                section                 
+----------------------------------------
+ ##### Q4 revenue by state last 30 days
+(1 row)
+
+                                                                        QUERY PLAN                                                                         
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=1142.82..1142.84 rows=8 width=45) (actual time=63.630..63.635 rows=8 loops=1)
+   Sort Key: (sum(o.total_amount)) DESC
+   Sort Method: quicksort  Memory: 25kB
+   Buffers: shared hit=309
+   ->  HashAggregate  (cost=1142.60..1142.70 rows=8 width=45) (actual time=63.603..63.611 rows=8 loops=1)
+         Group Key: c.state
+         Batches: 1  Memory Usage: 24kB
+         Buffers: shared hit=309
+         ->  Hash Join  (cost=703.42..1088.14 rows=7261 width=13) (actual time=40.741..59.270 rows=7547 loops=1)
+               Hash Cond: (o.customer_id = c.customer_id)
+               Buffers: shared hit=309
+               ->  Index Only Scan using idx_orders_date on orders o  (cost=0.42..366.08 rows=7261 width=12) (actual time=0.050..13.438 rows=7547 loops=1)
+                     Index Cond: (order_date >= (now() - '30 days'::interval))
+                     Filter: ((status)::text <> 'CANCELLED'::text)
+                     Rows Removed by Filter: 638
+                     Heap Fetches: 0
+                     Buffers: shared hit=56
+               ->  Hash  (cost=453.00..453.00 rows=20000 width=9) (actual time=28.074..28.075 rows=20000 loops=1)
+                     Buckets: 32768  Batches: 1  Memory Usage: 1087kB
+                     Buffers: shared hit=253
+                     ->  Seq Scan on customer c  (cost=0.00..453.00 rows=20000 width=9) (actual time=0.026..5.851 rows=20000 loops=1)
+                           Buffers: shared hit=253
+ Planning:
+   Buffers: shared hit=63
+ Planning Time: 0.703 ms
+ Execution Time: 63.779 ms
+(26 rows)
+
+     section      
+------------------
+ ##### Q5a NOT IN
+(1 row)
+
+                                                                      QUERY PLAN                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=2716.76..2716.77 rows=1 width=8) (actual time=82.124..82.126 rows=1 loops=1)
+   Buffers: shared hit=553
+   ->  Seq Scan on customer  (cost=2188.76..2691.76 rows=10000 width=0) (actual time=66.407..81.935 rows=1749 loops=1)
+         Filter: (NOT (hashed SubPlan 1))
+         Rows Removed by Filter: 18251
+         Buffers: shared hit=553
+         SubPlan 1
+           ->  Index Only Scan using idx_orders_date on orders  (cost=0.42..2066.22 rows=49017 width=4) (actual time=0.048..23.582 rows=49150 loops=1)
+                 Index Cond: (order_date >= (now() - '180 days'::interval))
+                 Heap Fetches: 0
+                 Buffers: shared hit=300
+ Planning Time: 0.227 ms
+ Execution Time: 82.394 ms
+(13 rows)
+
+       section        
+----------------------
+ ##### Q5b NOT EXISTS
+(1 row)
+
+                                                                      QUERY PLAN                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=3424.24..3424.25 rows=1 width=8) (actual time=87.610..87.615 rows=1 loops=1)
+   Buffers: shared hit=553
+   ->  Hash Right Anti Join  (cost=703.42..3422.32 rows=766 width=0) (actual time=86.764..87.479 rows=1749 loops=1)
+         Hash Cond: (o.customer_id = c.customer_id)
+         Buffers: shared hit=553
+         ->  Index Only Scan using idx_orders_date on orders o  (cost=0.42..2066.22 rows=49017 width=4) (actual time=0.071..34.640 rows=49150 loops=1)
+               Index Cond: (order_date >= (now() - '180 days'::interval))
+               Heap Fetches: 0
+               Buffers: shared hit=300
+         ->  Hash  (cost=453.00..453.00 rows=20000 width=4) (actual time=16.004..16.005 rows=20000 loops=1)
+               Buckets: 32768  Batches: 1  Memory Usage: 960kB
+               Buffers: shared hit=253
+               ->  Seq Scan on customer c  (cost=0.00..453.00 rows=20000 width=4) (actual time=0.007..5.945 rows=20000 loops=1)
+                     Buffers: shared hit=253
+ Planning:
+   Buffers: shared hit=15
+ Planning Time: 0.303 ms
+ Execution Time: 87.684 ms
+(18 rows)
+

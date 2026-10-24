@@ -1,0 +1,11 @@
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+ANALYZE
+        indexname         |  size   
+--------------------------+---------
+ idx_orders_customer_date | 6184 kB
+ idx_orders_pending       | 232 kB
+ idx_orders_date          | 9696 kB
+(3 rows)
+

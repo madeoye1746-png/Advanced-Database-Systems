@@ -1,0 +1,118 @@
+################ DEMO 1 - LOST UPDATE: two buyers each buy 1 of 10 items. Correct final stock = 8 ################
+----- Session A (lost_update_A.sql) -----
+11:36:53.462 | A read stock = 10
+11:36:55.492 | A committed: wrote 9
+----- Session B (lost_update_B.sql) -----
+11:36:53.462 | B read stock = 10
+11:36:53.491 | B committed: wrote 9
+----- Final state -----
+ product_id | stock_qty 
+------------+-----------
+          1 |         9
+          2 |        10
+(2 rows)
+
+################ DEMO 1 FIX (a) - atomic UPDATE stock_qty = stock_qty - 1. B waits for A's row lock. Correct final stock = 8 ################
+----- Session A (fix_atomic_A.sql) -----
+11:37:10.866 | A starts atomic UPDATE
+11:37:13.124 | A committed
+----- Session B (fix_atomic_B.sql) -----
+11:37:10.865 | B starts atomic UPDATE (will WAIT for A's lock)
+11:37:13.301 | B committed (after waiting)
+----- Final state -----
+ product_id | stock_qty 
+------------+-----------
+          1 |         8
+          2 |        10
+(2 rows)
+
+################ DEMO 1 FIX (b) - pessimistic locking SELECT ... FOR UPDATE. Correct final stock = 8 ################
+----- Session A (fix_forupdate_A.sql) -----
+11:37:24.456 | A locked row, read stock = 10
+11:37:26.465 | A committed: wrote 9
+----- Session B (fix_forupdate_B.sql) -----
+11:37:25.060 | B asks for the row lock...
+11:37:26.465 | B got the lock, read stock = 9
+11:37:26.469 | B committed: wrote 8
+----- Final state -----
+ product_id | stock_qty 
+------------+-----------
+          1 |         8
+          2 |        10
+(2 rows)
+
+################ DEMO 2a - NON-REPEATABLE READ under READ COMMITTED (writer sets stock 10 -> 5 between the reader's two reads) ################
+----- Session A (isolation_rc_reader.sql) -----
+11:37:32.583 | READER (READ COMMITTED) first read: stock = 10
+11:37:35.589 | READER (READ COMMITTED) second read: stock = 5
+----- Session B (isolation_writer.sql) -----
+11:37:33.967 | WRITER sets stock = 5 and commits
+----- Final state -----
+ product_id | stock_qty 
+------------+-----------
+          1 |         5
+          2 |        10
+(2 rows)
+
+################ DEMO 2b - REPEATABLE READ gives the reader a stable snapshot (second read still 10 although stock is now 5) ################
+----- Session A (isolation_rr_reader.sql) -----
+11:37:42.316 | READER (REPEATABLE READ) first read: stock = 10
+11:37:45.321 | READER (REPEATABLE READ) second read: stock = 10
+----- Session B (isolation_writer.sql) -----
+11:37:44.570 | WRITER sets stock = 5 and commits
+----- Final state -----
+ product_id | stock_qty 
+------------+-----------
+          1 |         5
+          2 |        10
+(2 rows)
+
+################ DEMO 2c - DIRTY READ is impossible: READ UNCOMMITTED in PostgreSQL still sees 10, not the uncommitted 1 ################
+----- Session A (dirty_writer.sql) -----
+11:37:55.868 | WRITER changed stock to 1 but has NOT committed
+11:37:59.877 | WRITER rolled back
+----- Session B (dirty_reader.sql) -----
+11:37:57.126 | READER (READ UNCOMMITTED) sees stock = 10
+----- Final state -----
+ product_id | stock_qty 
+------------+-----------
+          1 |        10
+          2 |        10
+(2 rows)
+
+################ DEMO 3 - DEADLOCK: A locks product 1 then wants 2; B locks 2 then wants 1. PostgreSQL aborts ONE of them (the victim varies per run) -> stock 9/9 = only the survivor updated ################
+----- Session A (deadlock_A.sql) -----
+11:38:08.263 | A locked product 1
+11:38:10.266 | A now wants product 2
+psql:/tmp/run_1245.sql:9: ERROR:  deadlock detected
+DETAIL:  Process 1315 waits for ShareLock on transaction 1129; blocked by process 1324.
+Process 1324 waits for ShareLock on transaction 1128; blocked by process 1315.
+HINT:  See server log for query details.
+CONTEXT:  while updating tuple (3,39) in relation "product"
+11:38:11.269 | A committed
+----- Session B (deadlock_B.sql) -----
+11:38:08.876 | B locked product 2
+11:38:10.879 | B now wants product 1
+11:38:11.272 | B script finished (if the deadlock victim: its transaction was rolled back)
+----- Final state -----
+ product_id | stock_qty 
+------------+-----------
+          1 |         9
+          2 |         9
+(2 rows)
+
+################ DEMO 3 FIX - same lock order in both transactions: no deadlock, B simply waits. Both updates applied (8/8) ################
+----- Session A (deadlock_A.sql) -----
+11:38:17.069 | A locked product 1
+11:38:19.072 | A now wants product 2
+11:38:19.077 | A committed
+----- Session B (deadlock_fixed_B.sql) -----
+11:38:19.079 | B locked product 1 (after waiting for A)
+11:38:19.083 | B committed
+----- Final state -----
+ product_id | stock_qty 
+------------+-----------
+          1 |         8
+          2 |         8
+(2 rows)
+

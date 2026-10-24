@@ -1,0 +1,107 @@
+DROP TABLE IF EXISTS stock_audit, delivery, payment, order_item, orders,
+                     product, customer, category CASCADE;
+NOTICE:  table "stock_audit" does not exist, skipping
+NOTICE:  table "delivery" does not exist, skipping
+NOTICE:  table "payment" does not exist, skipping
+NOTICE:  table "order_item" does not exist, skipping
+NOTICE:  table "orders" does not exist, skipping
+NOTICE:  table "product" does not exist, skipping
+NOTICE:  table "customer" does not exist, skipping
+NOTICE:  table "category" does not exist, skipping
+DROP TABLE
+CREATE TABLE category (
+    category_id        SERIAL PRIMARY KEY,
+    name               VARCHAR(60) NOT NULL UNIQUE,
+    parent_category_id INT REFERENCES category(category_id) ON DELETE SET NULL
+);
+CREATE TABLE
+CREATE TABLE customer (
+    customer_id  SERIAL PRIMARY KEY,
+    full_name    VARCHAR(100) NOT NULL,
+    email        VARCHAR(120) NOT NULL UNIQUE,
+    phone        VARCHAR(20),
+    city         VARCHAR(50)  NOT NULL,
+    state        VARCHAR(50)  NOT NULL,
+    created_at   TIMESTAMP    NOT NULL DEFAULT now(),
+    CONSTRAINT chk_email_format CHECK (email LIKE '%_@_%._%')
+);
+CREATE TABLE
+CREATE TABLE product (
+    product_id   SERIAL PRIMARY KEY,
+    sku          VARCHAR(20)  NOT NULL UNIQUE,
+    name         VARCHAR(120) NOT NULL,
+    category_id  INT          NOT NULL REFERENCES category(category_id),
+    unit_price   NUMERIC(12,2) NOT NULL CHECK (unit_price >= 0),
+    stock_qty    INT          NOT NULL DEFAULT 0 CHECK (stock_qty >= 0),
+    is_active    BOOLEAN      NOT NULL DEFAULT TRUE
+);
+CREATE TABLE
+CREATE TABLE orders (
+    order_id     SERIAL PRIMARY KEY,
+    customer_id  INT         NOT NULL REFERENCES customer(customer_id),
+    order_date   TIMESTAMP   NOT NULL DEFAULT now(),
+    status       VARCHAR(15) NOT NULL DEFAULT 'PENDING'
+                 CHECK (status IN ('PENDING','PAID','SHIPPED','DELIVERED','CANCELLED')),
+    total_amount NUMERIC(14,2) NOT NULL DEFAULT 0 CHECK (total_amount >= 0)
+);
+CREATE TABLE
+CREATE TABLE order_item (
+    order_id    INT NOT NULL REFERENCES orders(order_id) ON DELETE CASCADE,
+    product_id  INT NOT NULL REFERENCES product(product_id),
+    quantity    INT NOT NULL CHECK (quantity > 0),
+    unit_price  NUMERIC(12,2) NOT NULL CHECK (unit_price >= 0),
+    PRIMARY KEY (order_id, product_id)
+);
+CREATE TABLE
+CREATE TABLE payment (
+    payment_id  SERIAL PRIMARY KEY,
+    order_id    INT NOT NULL UNIQUE REFERENCES orders(order_id) ON DELETE CASCADE,
+    method      VARCHAR(20) NOT NULL CHECK (method IN ('CARD','TRANSFER','USSD','PAY_ON_DELIVERY')),
+    amount      NUMERIC(14,2) NOT NULL CHECK (amount > 0),
+    status      VARCHAR(10) NOT NULL CHECK (status IN ('SUCCESS','FAILED','REFUNDED')),
+    paid_at     TIMESTAMP NOT NULL DEFAULT now()
+);
+CREATE TABLE
+CREATE TABLE delivery (
+    delivery_id   SERIAL PRIMARY KEY,
+    order_id      INT NOT NULL UNIQUE REFERENCES orders(order_id) ON DELETE CASCADE,
+    courier       VARCHAR(40) NOT NULL,
+    tracking_no   VARCHAR(30) NOT NULL UNIQUE,
+    status        VARCHAR(15) NOT NULL CHECK (status IN ('PROCESSING','IN_TRANSIT','DELIVERED','RETURNED')),
+    shipped_at    TIMESTAMP,
+    delivered_at  TIMESTAMP,
+    CONSTRAINT chk_delivery_dates CHECK (delivered_at IS NULL OR delivered_at >= shipped_at)
+);
+CREATE TABLE
+CREATE TABLE stock_audit (
+    audit_id    BIGSERIAL PRIMARY KEY,
+    product_id  INT NOT NULL REFERENCES product(product_id),
+    old_qty     INT NOT NULL,
+    new_qty     INT NOT NULL,
+    changed_at  TIMESTAMP NOT NULL DEFAULT now(),
+    changed_by  TEXT NOT NULL DEFAULT current_user
+);
+CREATE TABLE
+CREATE OR REPLACE FUNCTION fn_audit_stock() RETURNS trigger AS $$
+BEGIN
+    IF NEW.stock_qty IS DISTINCT FROM OLD.stock_qty THEN
+        INSERT INTO stock_audit(product_id, old_qty, new_qty)
+        VALUES (OLD.product_id, OLD.stock_qty, NEW.stock_qty);
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE FUNCTION
+CREATE TRIGGER trg_audit_stock
+AFTER UPDATE OF stock_qty ON product
+FOR EACH ROW EXECUTE FUNCTION fn_audit_stock();
+CREATE TRIGGER
+CREATE OR REPLACE VIEW v_order_summary AS
+SELECT o.order_id, o.order_date, o.status, o.total_amount,
+       c.customer_id, c.full_name, c.state,
+       COUNT(oi.product_id) AS line_items
+FROM orders o
+JOIN customer c    ON c.customer_id = o.customer_id
+JOIN order_item oi ON oi.order_id   = o.order_id
+GROUP BY o.order_id, c.customer_id;
+CREATE VIEW

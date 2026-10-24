@@ -1,0 +1,28 @@
+--- 1. Duplicate e-mail (UNIQUE) ---
+psql:/tmp/run_1456.sql:5: ERROR:  duplicate key value violates unique constraint "customer_email_key"
+DETAIL:  Key (email)=(user1@example.com) already exists.
+--- 2. Negative stock (CHECK) ---
+psql:/tmp/run_1456.sql:7: ERROR:  new row for relation "product" violates check constraint "product_stock_qty_check"
+DETAIL:  Failing row contains (1, SKU-00001, Classic Handbag 1, 2, 185864.75, -5, t).
+--- 3. Order for a customer that does not exist (FOREIGN KEY) ---
+psql:/tmp/run_1456.sql:9: ERROR:  insert or update on table "orders" violates foreign key constraint "orders_customer_id_fkey"
+DETAIL:  Key (customer_id)=(999999) is not present in table "customer".
+--- 4. Invalid order status (CHECK) ---
+psql:/tmp/run_1456.sql:11: ERROR:  new row for relation "orders" violates check constraint "orders_status_check"
+DETAIL:  Failing row contains (1, 19538, 2025-09-27 10:48:13.058121, LOST, 871948.70).
+--- 5. Zero quantity on an order line (CHECK) ---
+psql:/tmp/run_1456.sql:13: ERROR:  new row for relation "order_item" violates check constraint "order_item_quantity_check"
+DETAIL:  Failing row contains (1, 2, 0, 100.00).
+--- 6. Duplicate product in the same order (composite PRIMARY KEY) ---
+psql:/tmp/run_1456.sql:16: ERROR:  duplicate key value violates unique constraint "order_item_pkey"
+DETAIL:  Key (order_id, product_id)=(1, 45) already exists.
+--- 7. Delivered before shipped (table CHECK) ---
+psql:/tmp/run_1456.sql:18: ERROR:  new row for relation "delivery" violates check constraint "chk_delivery_dates"
+DETAIL:  Failing row contains (15157, 3, Sendbox, TRK000000003, DELIVERED, 2025-04-20 01:32:53.006989, 2025-04-19 01:32:53.006989).
+--- 8. Trigger test: stock change is audited automatically ---
+UPDATE 1
+ audit_id | product_id | old_qty | new_qty |         changed_at         | changed_by 
+----------+------------+---------+---------+----------------------------+------------
+        1 |         10 |     413 |     412 | 2026-10-24 11:43:53.551163 | postgres
+(1 row)
+

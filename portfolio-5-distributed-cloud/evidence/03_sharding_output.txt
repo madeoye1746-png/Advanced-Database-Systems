@@ -1,0 +1,73 @@
+
+=================== 1. Create the remote shard table on nm-shard2 and the partitioned table on the coordinator ===================
+DROP TABLE
+CREATE TABLE
+CREATE EXTENSION
+DROP TABLE
+NOTICE:  table "orders_sharded" does not exist, skipping
+DROP SERVER
+NOTICE:  server "shard2" does not exist, skipping
+CREATE SERVER
+CREATE USER MAPPING
+CREATE TABLE
+CREATE TABLE
+CREATE FOREIGN TABLE
+
+=================== 2. Load 100,000 orders through the coordinator: each row is routed to its shard automatically ===================
+INSERT 0 100000
+     shard     | orders 
+---------------+--------
+ orders_shard0 |  50019
+ orders_shard1 |  49981
+(2 rows)
+
+
+=================== 3. Proof the data is PHYSICALLY on the second server (query nm-shard2 directly) ===================
+  server   | orders_stored_here 
+-----------+--------------------
+ nm-shard2 |              49981
+(1 row)
+
+   server   | orders_stored_here 
+------------+--------------------
+ nm-primary |              50019
+(1 row)
+
+
+=================== 4. Single-shard query: WHERE customer_id = 777 touches ONE shard only (partition pruning) ===================
+                  QUERY PLAN                  
+----------------------------------------------
+ Foreign Scan on orders_shard1 orders_sharded
+(1 row)
+
+                QUERY PLAN                
+------------------------------------------
+ Seq Scan on orders_shard0 orders_sharded
+   Filter: (customer_id = 778)
+(2 rows)
+
+
+=================== 5. Cross-shard query: aggregate over BOTH shards - result must equal the unsharded table ===================
+                         QUERY PLAN                         
+------------------------------------------------------------
+ HashAggregate
+   Group Key: orders_sharded.status
+   ->  Append
+         ->  Seq Scan on orders_shard0 orders_sharded_1
+         ->  Foreign Scan on orders_shard1 orders_sharded_2
+(5 rows)
+
+        source        | orders |   revenue   
+----------------------+--------+-------------
+ sharded  (2 servers) | 100000 | 82174643071
+ original (1 server)  | 100000 | 82174643071
+(2 rows)
+
+
+=================== 6. New order for customer 12345 is routed automatically ===================
+ stored_on_shard | order_id | customer_id 
+-----------------+----------+-------------
+ orders_shard0   |   900001 |       12345
+(1 row)
+
+INSERT 0 1

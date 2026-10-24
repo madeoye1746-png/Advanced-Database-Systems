@@ -1,0 +1,24 @@
+CREATE FUNCTION
+UPDATE 1
+        section         
+------------------------
+ stock of product 6 = 5
+(1 row)
+
+ new_order_id 
+--------------
+       200016
+(1 row)
+
+ stock_after_success 
+---------------------
+                   3
+(1 row)
+
+psql:/tmp/run_1504.sql:34: ERROR:  Insufficient stock for product 6: requested 4, available 3
+CONTEXT:  PL/pgSQL function place_order(integer,integer,integer) line 10 at RAISE
+ stock_after_failure_unchanged 
+-------------------------------
+                             3
+(1 row)
+

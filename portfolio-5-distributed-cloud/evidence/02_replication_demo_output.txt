@@ -1,0 +1,93 @@
+
+=================== A. Replication status as seen from the PRIMARY (pg_stat_replication) ===================
+ application_name | client_addr |   state   | sync_state | bytes_behind 
+------------------+-------------+-----------+------------+--------------
+ walreceiver      | 172.18.0.4  | streaming | async      |            0
+(1 row)
+
+
+=================== B. Roles: primary is read-write, replica is in recovery (read-only) ===================
+    node    | is_replica 
+------------+------------
+ nm-primary | f
+(1 row)
+
+    node    | is_replica 
+------------+------------
+ nm-replica | t
+(1 row)
+
+
+=================== C. A write on the primary appears on the replica (ASYNCHRONOUS replication = eventually consistent reads) ===================
+ id |              note               |           created            
+----+---------------------------------+------------------------------
+  1 | order #200100 placed on primary | 2026-10-24 12:00:56.39288+00
+(1 row)
+
+INSERT 0 1
+ id |              note               |           created            |      read_on_replica_at       
+----+---------------------------------+------------------------------+-------------------------------
+  1 | order #200100 placed on primary | 2026-10-24 12:00:56.39288+00 | 2026-10-24 12:00:57.733476+00
+(1 row)
+
+
+=================== D. Writes on the replica are rejected (protects consistency: only ONE node accepts writes) ===================
+ERROR:  cannot execute INSERT in a read-only transaction
+
+=================== E. Replication lag under load: insert 200,000 rows on the primary, then compare WAL positions ===================
+ bytes_behind_right_after_bulk_insert 
+--------------------------------------
+                                    0
+(1 row)
+
+ rows_visible_on_replica_2s_later 
+----------------------------------
+                           200001
+(1 row)
+
+
+=================== F. Read scaling: reporting query served by the REPLICA, leaving the primary free for orders ===================
+  status   | count  |   revenue    
+-----------+--------+--------------
+ DELIVERED | 144256 | 118572784311
+ SHIPPED   |  20039 |  16491229356
+ CANCELLED |  15948 |  13170202275
+ PAID      |  10084 |   8239474810
+ PENDING   |   9679 |   7988574237
+(5 rows)
+
+
+=================== G. Switch to SYNCHRONOUS replication: the commit waits until the replica confirms (stronger consistency) ===================
+ application_name |   state   | sync_state 
+------------------+-----------+------------
+ walreceiver      | streaming | sync
+(1 row)
+
+   id   |            created            
+--------+-------------------------------
+ 200002 | 2026-10-24 12:01:19.590905+00
+(1 row)
+
+INSERT 0 1
+
+=================== H. Availability vs consistency (CAP): stop the replica, then try to commit a write with a 5-second limit ===================
+--> replica stopped; INSERT on primary (synchronous mode):
+--> NO RESPONSE after 5 s: the primary refuses to acknowledge the commit without its synchronous standby (consistency kept, availability lost)
+--> go back to ASYNCHRONOUS mode: the primary stays available
+   id   |                note                
+--------+------------------------------------
+ 200004 | async commit while replica is DOWN
+(1 row)
+
+INSERT 0 1
+--> replica restarted; it catches up automatically from the primary's WAL:
+ rows_on_replica_after_catch_up | last_id 
+--------------------------------+---------
+                         200004 |  200004
+(1 row)
+
+ rows_on_primary | last_id 
+-----------------+---------
+          200004 |  200004
+(1 row)
+
