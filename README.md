@@ -2,7 +2,7 @@
 
 **Case study / organisation:** **NaijaMart Online**, a simulated Nigerian e-commerce platform (customers, products, orders, payments, deliveries).
 **DBMS used:** PostgreSQL 16 (relational, replication, sharding) and MongoDB 7 (NoSQL), both in Docker containers.
-**Student:** MARVELLOUS ADEOYE / 301911746
+**Student:** MARVELLOUS ADEOYE / 2026/A/MIT/0424
 
 All five portfolio activities use the same case study. Every claim in the portfolio is backed by captured output in the `evidence/` folder of the matching portfolio.
 
